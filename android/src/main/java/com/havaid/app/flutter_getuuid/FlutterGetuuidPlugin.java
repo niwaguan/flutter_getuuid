@@ -10,6 +10,9 @@ import android.telephony.TelephonyManager;
 
 import java.util.UUID;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
@@ -17,26 +20,44 @@ import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
 
 /** FlutterGetuuidPlugin */
-public class FlutterGetuuidPlugin implements MethodCallHandler {
-  private Context context;
-  FlutterGetuuidPlugin(Context context){
-    this.context = context;
-  }
-  /** Plugin registration. */
-  public static void registerWith(Registrar registrar) {
-    final MethodChannel channel = new MethodChannel(registrar.messenger(), "flutter_getuuid");
-    channel.setMethodCallHandler(new FlutterGetuuidPlugin(registrar.context()));
+public class FlutterGetuuidPlugin implements FlutterPlugin, MethodCallHandler {
+
+  @NonNull
+  private MethodChannel channel;
+
+  @Nullable
+  private FlutterPluginBinding binding;
+
+  @Nullable
+  Context getContext() {
+    if (this.binding != null) {
+      return  this.binding.getApplicationContext();
+    }
+    return null;
   }
 
   @Override
-  public void onMethodCall(MethodCall call, Result result) {
+  public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
+    channel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), "flutter_getuuid");
+    this.binding = flutterPluginBinding;
+    channel.setMethodCallHandler(this);
+  }
+
+  @Override
+  public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
+    this.binding = null;
+    channel.setMethodCallHandler(null);
+  }
+
+  @Override
+  public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
     if (call.method.equals("getPlatformVersion")) {
       result.success("Android " + android.os.Build.VERSION.RELEASE);
     }else if (call.method.equals("getDeviceUUID")){
-      result.success(getDeviceUUID(context));
+      result.success(getDeviceUUID(getContext()));
     }
     else if (call.method.equals("getVersionCode")){
-      result.success(getVersionCode(context));
+      result.success(getVersionCode(getContext()));
     }
     else if (call.method.equals("getsystemMark")){
       result.success(getsystemMark());
@@ -45,7 +66,7 @@ public class FlutterGetuuidPlugin implements MethodCallHandler {
       result.success(getCurrentDeviceModel());
     }
     else if (call.method.equals("getVersionName")){
-      result.success(getVersionName(context));
+      result.success(getVersionName(getContext()));
     }
     else {
       result.notImplemented();
@@ -54,6 +75,9 @@ public class FlutterGetuuidPlugin implements MethodCallHandler {
 
   public static String getAndroidID(Context context)
   {
+    if (context == null) {
+      return  "";
+    }
     String id = Settings.Secure.getString(
            context.getApplicationContext().getContentResolver(),
             Settings.Secure.ANDROID_ID
@@ -64,6 +88,9 @@ public class FlutterGetuuidPlugin implements MethodCallHandler {
   // 获取UUID
   public String getDeviceUUID(Context context)
   {
+    if (context == null) {
+      return "";
+    }
       String androidId = getAndroidID(context);
       UUID deviceUuid = new UUID(androidId.hashCode(), ((long)androidId.hashCode() << 32));
       String uuid;
@@ -75,6 +102,9 @@ public class FlutterGetuuidPlugin implements MethodCallHandler {
   public String getVersionCode(Context context)
   {
     int versionCode = 0;
+    if (context == null) {
+      return "0";
+    }
     try
     {
       versionCode =  context.getPackageManager().getPackageInfo(context.getPackageName() , PackageManager.GET_CONFIGURATIONS).versionCode;
@@ -90,6 +120,9 @@ public class FlutterGetuuidPlugin implements MethodCallHandler {
   public String getVersionName(Context context)
   {
     String versionName="";
+    if (context == null) {
+      return  "";
+    }
     try
     {
       versionName =  context.getPackageManager().getPackageInfo(context.getPackageName() , PackageManager.GET_CONFIGURATIONS).versionName;
